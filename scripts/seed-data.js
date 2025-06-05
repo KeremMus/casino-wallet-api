@@ -29,7 +29,7 @@ async function seedData() {
     console.log('🌱 Starting to seed players and wallets...');
 
     for (const playerData of playersToCreate) {
-      const playerId = randomUUID(); // Generate a unique ID for the player
+      const playerId = randomUUID(); // Generate a un ique ID for the player
       const walletId = randomUUID(); // Generate a unique ID for the wallet
 
       // Insert player into players table
