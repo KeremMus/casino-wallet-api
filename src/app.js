@@ -4,6 +4,9 @@ const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
+// Import the database pool
+const pool = require('./config/database'); //  Ensure this line is added or pool is accessible
+
 const app = express();
 
 // Security middleware
@@ -27,10 +30,10 @@ app.use(express.urlencoded({ extended: true }));
 
 // Basic health check
 app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'healthy', 
+  res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV 
+    environment: process.env.NODE_ENV
   });
 });
 
@@ -43,12 +46,46 @@ app.get('/wallet/:player_id', (req, res) => {
   res.json({ message: 'Wallet endpoint - coming in Phase 2' });
 });
 
-app.get('/players', (req, res) => {
-  res.json({ message: 'Players endpoint - coming in Phase 2' });
+// --- Implement GET /players endpoint ---
+app.get('/players', async (req, res, next) => { // Added 'next' for error handling
+  try {
+    const query = `
+      SELECT
+        p.id AS player_id,
+        p.name AS player_name,
+        p.email AS player_email,
+        w.id AS wallet_id,
+        w.balance AS wallet_balance,
+        w.currency AS wallet_currency,
+        p.created_at AS player_created_at,
+        w.updated_at AS wallet_updated_at
+      FROM
+        players p
+      LEFT JOIN
+        wallets w ON p.id = w.player_id
+      ORDER BY
+        p.name;
+    `;
+    // Fetches players and their corresponding wallet details.
+    // Uses a LEFT JOIN in case a player somehow exists without a wallet, though your schema has a unique constraint.
+    // Orders by player name for consistent output.
+
+    const { rows } = await pool.query(query);
+    res.status(200).json(rows); // Send the list of players and their wallet details
+
+  } catch (error) {
+    console.error('❌ Error fetching players:', error);
+    // Pass the error to the global error handler
+    // The global error handler is already set up to send a 500 response.
+    next(error);
+  }
 });
+// --- End of GET /players endpoint ---
+
 
 // Global error handler
-app.use((err, req, res, next) => {
+app.use((err, req, res, next // Ensure 'next' is present if not already
+) => {
   console.error('Global error:', err);
   res.status(500).json({
     status: 'rejected',
